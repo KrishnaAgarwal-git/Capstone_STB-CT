@@ -1,0 +1,49 @@
+{
+  "version": "ghgp-2015-v1",
+  "source": "GHG Protocol Corporate Standard (WRI, 2015); IEA Global EV Outlook 2021; EEA Transport and Environment Report 2019",
+  "notes": "All transport factors are grams CO2e per passenger-kilometre. Electricity is grams CO2e per kWh. Food is grams CO2e per serving. Consumption is grams CO2e per item.",
+  "transport": {
+    "private_car": 171,
+    "two_wheeler": 72,
+    "auto_rickshaw": 108,
+    "public_transit": 41,
+    "shared_ride": 171,
+    "electric_vehicle": 0,
+    "walk_cycle": 0
+  },
+  "evEnergyWhPerKm": 180,
+  "gridMixByRegion": {
+    "IN-PB": 710,
+    "IN-DL": 690,
+    "IN-MH": 720,
+    "IN-KA": 620,
+    "IN-TN": 600,
+    "IN-NATIONAL": 700
+  },
+  "electricity": {
+    "grid_electricity": 710
+  },
+  "food": {
+    "red_meat": 6900,
+    "poultry": 1800,
+    "fish": 1600,
+    "dairy": 1300,
+    "vegetarian": 700,
+    "vegan": 450
+  },
+  "consumption": {
+    "clothing_item": 8500,
+    "electronics_small": 34000,
+    "electronics_large": 120000,
+    "household_goods": 5200,
+    "packaging_waste": 400
+  },
+  "repairAvoidedEmissions": {
+    "home_repair": 5200,
+    "electronics_repair": 34000
+  },
+  "baselines": {
+    "avoidedTripDefaultKm": 8,
+    "avoidedTripMode": "private_car"
+  }
+}
