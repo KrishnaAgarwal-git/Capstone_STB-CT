@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recommendation Engine — Inspector</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:            #14191C;
+    --panel:         #1B2226;
+    --panel-raised:  #212A2F;
+    --line:          #2A343A;
+    --line-soft:     #232B30;
+    --text:          #E7EDEF;
+    --text-dim:      #92A0A6;
+    --text-faint:    #5C6B71;
+
+    --sage:          #6BBF95;
+    --sage-dim:      #6BBF9522;
+    --amber:         #E3A94A;
+    --amber-dim:     #E3A94A22;
+    --terracotta:    #D97862;
+    --terracotta-dim:#D9786222;
+    --slate:         #8B9AA1;
+    --slate-dim:     #8B9AA122;
+
+    --food:          #D9A15C;
+    --transport:     #6FA8C4;
+    --electricity:   #E3C44A;
+    --waste:         #7FBF8A;
+    --water:         #6FC4C0;
+
+    --radius: 3px;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --sans: 'Inter', -apple-system, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--sans);
+    font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background:var(--sage-dim); }
+  :focus-visible{ outline:2px solid var(--sage); outline-offset:2px; }
+  @media (prefers-reduced-motion: reduce){ *{ animation-duration:0.01ms !important; transition-duration:0.01ms !important; } }
+
+  /* ---------- header ---------- */
+  header{
+    border-bottom:1px solid var(--line);
+    padding:14px 24px;
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--panel);
+    position:sticky; top:0; z-index:20;
+  }
+  .brand{ display:flex; align-items:baseline; gap:10px; }
+  .brand-mark{
+    width:8px; height:8px; border-radius:1px; background:var(--sage);
+    display:inline-block; flex-shrink:0;
+  }
+  .brand h1{
+    font-size:14px; font-weight:600; margin:0; letter-spacing:0.01em;
+  }
+  .brand .sub{ color:var(--text-faint); font-size:12px; font-family:var(--mono); }
+  .conn-status{
+    font-family:var(--mono); font-size:11.5px; color:var(--text-dim);
+    display:flex; align-items:center; gap:6px;
+  }
+  .conn-dot{ width:6px; height:6px; border-radius:50%; background:var(--text-faint); }
+  .conn-dot.live{ background:var(--sage); box-shadow:0 0 0 3px var(--sage-dim); }
+  .conn-dot.down{ background:var(--terracotta); box-shadow:0 0 0 3px var(--terracotta-dim); }
+
+  /* ---------- layout ---------- */
+  .app{
+    display:grid;
+    grid-template-columns: 300px 1fr 340px;
+    min-height:calc(100vh - 49px);
+  }
+  @media (max-width: 1080px){
+    .app{ grid-template-columns: 1fr; }
+    .rail, .trace{ border:none; border-top:1px solid var(--line); }
+  }
+
+  .rail{
+    border-right:1px solid var(--line);
+    padding:20px;
+    background:var(--panel);
+  }
+  .main{ padding:24px 28px; min-width:0; }
+  .trace{
+    border-left:1px solid var(--line);
+    padding:20px;
+    background:var(--panel);
+    font-family:var(--mono);
+  }
+
+  .section-label{
+    font-size:11px; text-transform:uppercase; letter-spacing:0.08em;
+    color:var(--text-faint); font-weight:600; margin:0 0 12px;
+  }
+
+  /* ---------- scenario buttons ---------- */
+  .scenario-list{ display:flex; flex-direction:column; gap:6px; margin-bottom:24px; }
+  .scenario-btn{
+    text-align:left; background:transparent; border:1px solid var(--line);
+    border-radius:var(--radius); padding:10px 12px; cursor:pointer;
+    color:var(--text); font-family:var(--sans); transition:border-color .12s, background .12s;
+  }
+  .scenario-btn:hover{ border-color:var(--text-faint); background:var(--panel-raised); }
+  .scenario-btn.active{ border-color:var(--sage); background:var(--sage-dim); }
+  .scenario-btn .name{ font-size:13px; font-weight:600; display:block; }
+  .scenario-btn .meta{ font-size:11.5px; color:var(--text-dim); font-family:var(--mono); display:block; margin-top:2px; }
+
+  /* ---------- custom age slider ---------- */
+  .slider-block{
+    border-top:1px solid var(--line); padding-top:18px; margin-top:18px;
+  }
+  .slider-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .slider-row .val{ font-family:var(--mono); font-size:15px; font-weight:600; color:var(--sage); }
+  input[type=range]{
+    width:100%; -webkit-appearance:none; appearance:none;
+    height:3px; border-radius:2px; background:var(--line);
+    margin:8px 0 4px;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:14px; height:14px; border-radius:50%;
+    background:var(--sage); cursor:pointer; border:2px solid var(--bg);
+    box-shadow:0 0 0 1px var(--sage);
+  }
+  .slider-ticks{ display:flex; justify-content:space-between; font-size:10px; color:var(--text-faint); font-family:var(--mono); }
+  .tier-badge{
+    display:inline-flex; align-items:center; gap:5px;
+    font-family:var(--mono); font-size:11px; font-weight:600;
+    padding:3px 8px; border-radius:2px; margin-top:10px;
+    text-transform:uppercase; letter-spacing:0.04em;
+  }
+  .tier-badge.cold{ background:var(--terracotta-dim); color:var(--terracotta); }
+  .tier-badge.early{ background:var(--amber-dim); color:var(--amber); }
+  .tier-badge.mature{ background:var(--sage-dim); color:var(--sage); }
+
+  .rail-note{
+    font-size:12px; color:var(--text-dim); line-height:1.6; margin-top:18px;
+    padding-top:18px; border-top:1px solid var(--line);
+  }
+  .rail-note code{ font-family:var(--mono); color:var(--text); background:var(--panel-raised); padding:1px 5px; border-radius:2px; font-size:11px; }
+  .rail-note .mock-tag{
+    display:inline-block; font-family:var(--mono); font-size:10px; font-weight:600;
+    color:var(--amber); border:1px solid var(--amber); border-radius:2px;
+    padding:1px 5px; margin-bottom:8px; letter-spacing:0.05em;
+  }
+
+  /* ---------- main / cards ---------- */
+  .main-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px; flex-wrap:wrap; gap:8px; }
+  .main-head h2{ font-size:18px; margin:0; font-weight:700; }
+  .main-head .count{ font-family:var(--mono); font-size:12.5px; color:var(--text-dim); }
+  .main-sub{ color:var(--text-dim); font-size:13px; margin:2px 0 22px; max-width:64ch; }
+
+  .cards{ display:flex; flex-direction:column; gap:10px; }
+  .card{
+    border:1px solid var(--line); border-radius:var(--radius); background:var(--panel);
+    padding:16px 18px; position:relative; overflow:hidden;
+    animation:rise .28s ease both;
+  }
+  .card::before{
+    content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+    background:var(--cat-color, var(--slate));
+  }
+  @keyframes rise{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:translateY(0); } }
+
+  .card-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:6px; }
+  .card-title{ font-size:15px; font-weight:700; margin:0; }
+  .card-cat{
+    font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em;
+    color:var(--cat-color, var(--slate)); white-space:nowrap; padding-top:2px;
+  }
+  .card-body{ color:var(--text-dim); font-size:13.5px; line-height:1.6; margin:0 0 12px; }
+
+  .card-stats{ display:flex; flex-wrap:wrap; gap:16px; margin-bottom:12px; }
+  .stat{ font-family:var(--mono); }
+  .stat .num{ font-size:15px; font-weight:600; color:var(--text); display:block; }
+  .stat .lbl{ font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.05em; }
+  .stat.savings .num{ color:var(--sage); }
+
+  .card-tradeoff{
+    font-size:12px; color:var(--amber); background:var(--amber-dim);
+    border-radius:2px; padding:7px 10px; margin-bottom:12px; line-height:1.5;
+  }
+
+  .card-actions{ display:flex; gap:8px; }
+  .card-btn{
+    font-family:var(--sans); font-size:12.5px; font-weight:600; cursor:pointer;
+    border-radius:2px; padding:7px 13px; border:1px solid var(--line);
+    background:transparent; color:var(--text-dim); transition:all .12s;
+  }
+  .card-btn:hover{ border-color:var(--text-faint); color:var(--text); }
+  .card-btn.accept:hover{ border-color:var(--sage); color:var(--sage); background:var(--sage-dim); }
+  .card-btn.dismiss:hover{ border-color:var(--terracotta); color:var(--terracotta); background:var(--terracotta-dim); }
+  .card-btn:disabled{ opacity:0.4; cursor:default; }
+  .card-feedback-tag{
+    font-family:var(--mono); font-size:11px; padding:5px 10px; border-radius:2px;
+  }
+  .card-feedback-tag.accepted{ color:var(--sage); background:var(--sage-dim); }
+  .card-feedback-tag.dismissed{ color:var(--terracotta); background:var(--terracotta-dim); }
+
+  .empty-state{
+    border:1px dashed var(--line); border-radius:var(--radius); padding:40px 24px;
+    text-align:center; color:var(--text-dim);
+  }
+  .empty-state .glyph{ font-family:var(--mono); font-size:20px; color:var(--text-faint); margin-bottom:8px; }
+
+  .loading-row{ display:flex; align-items:center; gap:10px; color:var(--text-dim); font-family:var(--mono); font-size:12.5px; padding:24px 0; }
+  .spinner{
+    width:12px; height:12px; border-radius:50%; border:2px solid var(--line);
+    border-top-color:var(--sage); animation:spin .7s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .error-banner{
+    border:1px solid var(--terracotta); background:var(--terracotta-dim); color:var(--terracotta);
+    border-radius:var(--radius); padding:12px 14px; font-size:13px; margin-bottom:16px; line-height:1.5;
+  }
+  .error-banner strong{ display:block; margin-bottom:2px; font-family:var(--mono); font-size:11.5px; text-transform:uppercase; letter-spacing:0.05em; }
+
+  /* ---------- trace panel ---------- */
+  .trace-head{ font-family:var(--sans); }
+  .trace-item{
+    border:1px solid var(--line-soft); border-radius:2px; padding:10px 12px; margin-bottom:8px;
+    background:var(--panel-raised);
+  }
+  .trace-item .t-type{ font-size:11px; color:var(--text-dim); margin-bottom:4px; word-break:break-word; }
+  .trace-item .t-row{ display:flex; justify-content:space-between; font-size:12px; margin-top:2px; }
+  .trace-item .t-row .k{ color:var(--text-faint); }
+  .trace-item .t-row .v{ color:var(--text); }
+  .trace-item .t-row .v.mature{ color:var(--sage); }
+  .trace-item .t-row .v.early{ color:var(--amber); }
+
+  .baseline-block{ margin-top:20px; padding-top:16px; border-top:1px solid var(--line); }
+  .baseline-row{ display:flex; justify-content:space-between; font-size:12px; padding:5px 0; }
+  .baseline-row .k{ color:var(--text-dim); text-transform:capitalize; }
+  .baseline-row .v{ color:var(--text); }
+  .baseline-empty{ color:var(--text-faint); font-size:11.5px; font-style:italic; }
+
+  .trace-empty{ color:var(--text-faint); font-size:12px; font-style:italic; }
+
+  .new-user-form{ border-top:1px solid var(--line); padding-top:16px; margin-top:16px; }
+  .form-row{ display:flex; gap:6px; margin-top:8px; }
+  .form-row input{
+    flex:1; min-width:0; background:var(--panel-raised); border:1px solid var(--line);
+    border-radius:2px; color:var(--text); font-family:var(--mono); font-size:12.5px; padding:7px 9px;
+  }
+  .form-row input:focus{ border-color:var(--sage); }
+  .form-btn{
+    font-family:var(--sans); font-size:12px; font-weight:600; cursor:pointer;
+    border-radius:2px; padding:7px 11px; border:1px solid var(--sage); color:var(--sage); background:transparent;
+  }
+  .form-btn:hover{ background:var(--sage-dim); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="brand-mark"></span>
+    <h1>Recommendation Engine</h1>
+    <span class="sub">/ inspector</span>
+  </div>
+  <div class="conn-status">
+    <span class="conn-dot" id="connDot"></span>
+    <span id="connLabel">connecting…</span>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- LEFT RAIL: scenario / user selection -->
+  <aside class="rail">
+    <p class="section-label">Demo scenarios</p>
+    <div class="scenario-list" id="scenarioList"></div>
+
+    <div class="slider-block">
+      <p class="section-label" style="margin-bottom:6px;">Or set account age directly</p>
+      <div class="slider-row">
+        <span style="font-size:12px; color:var(--text-dim);">Days since signup</span>
+        <span class="val" id="ageVal">20</span>
+      </div>
+      <input type="range" id="ageSlider" min="0" max="60" value="20" step="1">
+      <div class="slider-ticks"><span>0</span><span>7</span><span>30</span><span>60</span></div>
+      <div id="tierBadge"></div>
+    </div>
+
+    <div class="new-user-form">
+      <p class="section-label" style="margin-bottom:6px;">New synthetic user</p>
+      <div class="form-row">
+        <input type="text" id="newUserId" placeholder="user id (optional)">
+        <button class="form-btn" id="newUserBtn">Create</button>
+      </div>
+    </div>
+
+    <div class="rail-note">
+      <span class="mock-tag">MOCK DATA</span><br>
+      Every kg CO2e figure here comes from <code>MockCarbonCalculationClient</code> —
+      illustrative numbers, not real emission factors. Swap it for
+      <code>HttpCarbonCalculationClient</code> in <code>demo_server.py</code>
+      to point this UI at a real Carbon Calculator with no other changes.
+    </div>
+  </aside>
+
+  <!-- CENTER: recommendation cards -->
+  <main class="main">
+    <div class="main-head">
+      <h2 id="userHeading">—</h2>
+      <span class="count" id="userMeta"></span>
+    </div>
+    <p class="main-sub" id="mainSub">Recommendations shaped as they'd appear as notifications on a user's device.</p>
+
+    <div id="errorSlot"></div>
+    <div id="cardsSlot"></div>
+  </main>
+
+  <!-- RIGHT: pipeline trace -->
+  <aside class="trace">
+    <p class="section-label">Mined patterns</p>
+    <div id="traceSlot"><p class="trace-empty">No patterns mined yet.</p></div>
+
+    <div class="baseline-block">
+      <p class="section-label">Carbon baseline (kg CO2e / active day)</p>
+      <div id="baselineSlot"><p class="baseline-empty">No baseline yet.</p></div>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+const API = window.location.origin;
+
+const CATEGORY_COLOR = {
+  food: 'var(--food)', transport: 'var(--transport)', electricity: 'var(--electricity)',
+  waste: 'var(--waste)', water: 'var(--water)', shopping: 'var(--slate)', lifestyle: 'var(--slate)',
+};
+
+const SCENARIOS = [
+  { id: 'demo_cold_start', name: 'Cold start', meta: '3 days · no patterns yet', age: 3 },
+  { id: 'demo_progressive', name: 'Progressive', meta: '20 days · patterns emerging', age: 20 },
+  { id: 'demo_mature', name: 'Mature', meta: '45 days · established habits', age: 45 },
+];
+
+let currentUserId = null;
+let currentAge = 20;
+let sliderDebounce = null;
+
+// ---------- connection check ----------
+async function checkHealth(){
+  try{
+    const res = await fetch(`${API}/api/health`);
+    if(!res.ok) throw new Error();
+    document.getElementById('connDot').className = 'conn-dot live';
+    document.getElementById('connLabel').textContent = 'demo_server.py connected';
+    return true;
+  }catch(e){
+    document.getElementById('connDot').className = 'conn-dot down';
+    document.getElementById('connLabel').textContent = 'server unreachable';
+    showError(
+      'Cannot reach demo_server.py',
+      `This page expects a local server at ${API}. Run <code>python3 demo_server.py</code> ` +
+      `from the <code>engine/</code> folder, then reload this page. If you opened this HTML ` +
+      `file directly (file://) rather than via the server, start the server and visit ` +
+      `<code>http://localhost:8420</code> instead — it serves this page for you.`
+    );
+    return false;
+  }
+}
+
+function showError(title, html){
+  document.getElementById('errorSlot').innerHTML = `
+    <div class="error-banner"><strong>${title}</strong>${html}</div>`;
+}
+function clearError(){ document.getElementById('errorSlot').innerHTML = ''; }
+
+// ---------- scenario rail ----------
+function renderScenarios(){
+  const list = document.getElementById('scenarioList');
+  list.innerHTML = SCENARIOS.map(s => `
+    <button class="scenario-btn ${s.id === currentUserId ? 'active' : ''}" data-id="${s.id}" data-age="${s.age}">
+      <span class="name">${s.name}</span>
+      <span class="meta">${s.meta}</span>
+    </button>`).join('');
+  list.querySelectorAll('.scenario-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentUserId = btn.dataset.id;
+      currentAge = Number(btn.dataset.age);
+      document.getElementById('ageSlider').value = currentAge;
+      updateAgeDisplay();
+      renderScenarios();
+      loadRecommendations();
+    });
+  });
+}
+
+function tierFor(age){
+  if(age < 7) return { key:'cold', label:'Cold start · generic only' };
+  if(age < 31) return { key:'early', label:'Progressive · early tier' };
+  return { key:'mature', label:'Mature · full personalization' };
+}
+
+function updateAgeDisplay(){
+  document.getElementById('ageVal').textContent = currentAge;
+  const t = tierFor(currentAge);
+  document.getElementById('tierBadge').innerHTML =
+    `<span class="tier-badge ${t.key}">${t.label}</span>`;
+}
+
+document.getElementById('ageSlider').addEventListener('input', (e) => {
+  currentAge = Number(e.target.value);
+  updateAgeDisplay();
+  currentUserId = null; // manual slider deselects the fixed scenarios
+  renderScenarios();
+  clearTimeout(sliderDebounce);
+  sliderDebounce = setTimeout(() => createAndLoadSyntheticUser(currentAge), 350);
+});
+
+async function createAndLoadSyntheticUser(age){
+  try{
+    const res = await fetch(`${API}/api/users/new`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ user_id: `slider_user_${age}`, account_age_days: age, seed_activities: true }),
+    });
+    const data = await res.json();
+    currentUserId = data.user_id;
+    await loadRecommendations();
+  }catch(e){
+    showError('Could not create synthetic user', String(e.message || e));
+  }
+}
+
+document.getElementById('newUserBtn').addEventListener('click', async () => {
+  const idInput = document.getElementById('newUserId');
+  const userId = idInput.value.trim() || undefined;
+  try{
+    const res = await fetch(`${API}/api/users/new`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ user_id: userId, account_age_days: currentAge, seed_activities: true }),
+    });
+    if(!res.ok) throw new Error((await res.json()).error || res.statusText);
+    const data = await res.json();
+    currentUserId = data.user_id;
+    idInput.value = '';
+    renderScenarios();
+    await loadRecommendations();
+  }catch(e){
+    showError('Could not create user', String(e.message || e));
+  }
+});
+
+// ---------- load + render recommendations ----------
+async function loadRecommendations(){
+  if(!currentUserId) return;
+  clearError();
+  document.getElementById('cardsSlot').innerHTML = `
+    <div class="loading-row"><span class="spinner"></span> running pipeline…</div>`;
+  document.getElementById('traceSlot').innerHTML = '<p class="trace-empty">Mining patterns…</p>';
+
+  try{
+    const [recRes, baselineRes] = await Promise.all([
+      fetch(`${API}/api/users/${currentUserId}/recommendations`),
+      fetch(`${API}/api/users/${currentUserId}/baseline`),
+    ]);
+    if(!recRes.ok) throw new Error((await recRes.json()).error || recRes.statusText);
+    const data = await recRes.json();
+    const baseline = baselineRes.ok ? await baselineRes.json() : {};
+
+    document.getElementById('userHeading').textContent = data.user_id;
+    document.getElementById('userMeta').textContent =
+      `account_age_days=${data.account_age_days} · ${data.activity_count} logged activities`;
+    currentAge = data.account_age_days;
+
+    renderCards(data.recommendations);
+    renderTrace(data.recommendations);
+    renderBaseline(baseline);
+  }catch(e){
+    document.getElementById('cardsSlot').innerHTML = '';
+    showError('Pipeline call failed', String(e.message || e));
+  }
+}
+
+function renderCards(recs){
+  const slot = document.getElementById('cardsSlot');
+  if(!recs.length){
+    slot.innerHTML = `
+      <div class="empty-state">
+        <div class="glyph">∅</div>
+        No recommendations cleared the ranking threshold for this user right now.
+      </div>`;
+    return;
+  }
+  slot.innerHTML = `<div class="cards">${recs.map(cardHTML).join('')}</div>`;
+  slot.querySelectorAll('[data-accept]').forEach(btn =>
+    btn.addEventListener('click', () => sendFeedback(btn.dataset.accept, 'accepted', btn)));
+  slot.querySelectorAll('[data-dismiss]').forEach(btn =>
+    btn.addEventListener('click', () => sendFeedback(btn.dataset.dismiss, 'dismissed', btn)));
+}
+
+function cardHTML(r){
+  const color = CATEGORY_COLOR[r.category] || 'var(--slate)';
+  return `
+    <div class="card" style="--cat-color:${color}" data-card-id="${r.id}">
+      <div class="card-top">
+        <h3 class="card-title">${escapeHtml(r.title)}</h3>
+        <span class="card-cat">${r.category}</span>
+      </div>
+      <p class="card-body">${escapeHtml(r.body)}</p>
+      <div class="card-stats">
+        <div class="stat savings"><span class="num">${r.saved_kg_co2e.toFixed(2)} kg</span><span class="lbl">CO2e saved</span></div>
+        <div class="stat"><span class="num">${r.percent_reduction.toFixed(0)}%</span><span class="lbl">reduction</span></div>
+        <div class="stat"><span class="num">${r.confidence.toFixed(2)}</span><span class="lbl">confidence</span></div>
+        <div class="stat"><span class="num">${r.weekly_kg_projection.toFixed(1)} kg</span><span class="lbl">weekly proj.</span></div>
+      </div>
+      ${r.tradeoff_note ? `<div class="card-tradeoff">${escapeHtml(r.tradeoff_note)}</div>` : ''}
+      <div class="card-actions" data-actions="${r.id}">
+        <button class="card-btn accept" data-accept="${r.id}">Accept</button>
+        <button class="card-btn dismiss" data-dismiss="${r.id}">Dismiss</button>
+      </div>
+    </div>`;
+}
+
+async function sendFeedback(notificationId, eventType, btnEl){
+  const card = btnEl.closest('.card');
+  const actionsEl = card.querySelector(`[data-actions="${notificationId}"]`);
+  actionsEl.querySelectorAll('button').forEach(b => b.disabled = true);
+  try{
+    const res = await fetch(`${API}/api/users/${currentUserId}/feedback`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ recommendation_id: notificationId, event_type: eventType }),
+    });
+    if(!res.ok) throw new Error((await res.json()).error || res.statusText);
+    actionsEl.innerHTML = `<span class="card-feedback-tag ${eventType}">${eventType} — logged to feedback loop</span>`;
+  }catch(e){
+    actionsEl.querySelectorAll('button').forEach(b => b.disabled = false);
+    showError('Feedback call failed', String(e.message || e));
+  }
+}
+
+function renderTrace(recs){
+  // The API's /recommendations endpoint doesn't separately expose mined
+  // patterns (only what generate_candidates/rank_and_filter selected), so
+  // the trace panel summarises what's visible from the selected
+  // recommendations themselves: per-category confidence and whether that
+  // reads as an early- or mature-tier signal.
+  const slot = document.getElementById('traceSlot');
+  if(!recs.length){
+    slot.innerHTML = '<p class="trace-empty">No patterns mined yet.</p>';
+    return;
+  }
+  slot.innerHTML = recs.map(r => {
+    const tierClass = r.confidence >= 0.65 ? 'mature' : (r.confidence >= 0.5 ? 'early' : '');
+    const tierLabel = r.confidence >= 0.65 ? 'mature' : (r.confidence >= 0.5 ? 'early / context-aware' : 'generic');
+    return `
+      <div class="trace-item">
+        <div class="t-type">${r.category} · ${escapeHtml(r.title)}</div>
+        <div class="t-row"><span class="k">estimate_confidence</span><span class="v ${tierClass}">${r.confidence.toFixed(3)}</span></div>
+        <div class="t-row"><span class="k">tier read</span><span class="v ${tierClass}">${tierLabel}</span></div>
+        <div class="t-row"><span class="k">final_score</span><span class="v">${r.score.toFixed(3)}</span></div>
+      </div>`;
+  }).join('');
+}
+
+function renderBaseline(baseline){
+  const slot = document.getElementById('baselineSlot');
+  const entries = Object.entries(baseline || {});
+  if(!entries.length){
+    slot.innerHTML = '<p class="baseline-empty">No category baseline yet — needs logged activity history.</p>';
+    return;
+  }
+  slot.innerHTML = entries.map(([cat, kg]) => `
+    <div class="baseline-row"><span class="k">${cat}</span><span class="v">${Number(kg).toFixed(3)} kg</span></div>
+  `).join('');
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// ---------- boot ----------
+(async function init(){
+  updateAgeDisplay();
+  const healthy = await checkHealth();
+  if(!healthy) return;
+  currentUserId = 'demo_mature';
+  currentAge = 45;
+  document.getElementById('ageSlider').value = 45;
+  updateAgeDisplay();
+  renderScenarios();
+  await loadRecommendations();
+})();
+</script>
+
+</body>
+</html>
